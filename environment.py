@@ -36,7 +36,6 @@ class PaperRaceEnv:
         #   SpdChn: A sebesség megváltoztatása.(De ez relatívban van!!!) (MÁTRIX!!!)
         #   SpdOld: Az aktuális #sebességvektor
 
-
         end = False
         reward = 0
 
