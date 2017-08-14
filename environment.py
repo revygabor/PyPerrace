@@ -65,7 +65,7 @@ class PaperRaceEnv:
         if np.array_equal(spd_new, [0,0]):
             end = True
 
-        if self.crosses_finish_line(pos_old, spd_new, self.segm_list[self.segm][0:2], self.segm_list[self.segm][1:]):
+        if self.crosses_finish_line(pos_old, spd_new, self.segm_list[self.segm][0:2], self.segm_list[self.segm][2:]):
             reward = 1000
             self.segm += 1
             if self.segm > len(self.segm_list):
@@ -78,7 +78,7 @@ class PaperRaceEnv:
          pos[0] < 0 or pos[1] < 0  or np.isnan(pos[0]) or np.isnan(pos[1]):
             return False
         else:
-            return np.array_equal(self.trk_pic[pos[1],pos[0]], self.trk_col)
+            return np.array_equal(self.trk_pic[int(pos[1]),int(pos[0])], self.trk_col)
 
     def crosses_finish_line(self, pos, spd, finish_left, finish_right):
         # Ha a Pos-ból húzott Spd vektor metszi a celvonalat (Szakasz(!),
@@ -126,7 +126,7 @@ class PaperRaceEnv:
                 r = r + 1
 
                 #GG-n belül vagyunk-e még?
-                pix_in_gg = np.array_equal(self.gg_pic[x-1, y-1], [255,255,255,255])
+                pix_in_gg = np.array_equal(self.gg_pic[int(x-1), int(y-1)], [255,255,255,255])
 
             return -(x-xsrt), y-ysrt
         else:
