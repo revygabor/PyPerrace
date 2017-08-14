@@ -8,6 +8,12 @@ import random
 
 from environment import PaperRaceEnv
 
+def softmax(x):
+    exp = np.exp(x)
+    s = sum(exp)
+    return exp / s
+
+
 plt.ion()
 plt.show()
 
@@ -37,7 +43,8 @@ exp_memory = deque(maxlen=mem_size)
 
 episodes = 10000
 
-for _ in range(episodes):
+for ep in range(episodes):
+    print(ep)
     plt.clf()
     env.draw_track()
     v = np.array([1, 0])
@@ -45,11 +52,25 @@ for _ in range(episodes):
     reward = 0
     end = False
     while not end:
+
+        #e-greedy
         if random.random() < explore:
             action = random.randint(1, 9)
         else:
             qs = [qn.predict(np.array([np.concatenate((pos, v, env.gg_action(act)))]))[0] for act in range(1, 10)]
             action = np.argmax(qs) + 1
+
+        # #softmax
+        # qs = [qn.predict(np.array([np.concatenate((pos, v, env.gg_action(act)))]))[0] for act in range(1, 10)]
+        # sm = softmax(qs)
+        # cs = np.cumsum(sm)
+        # action = 1
+        # rand = random.random()
+        # for i in range(len(cs)):
+        #     if rand > cs[i]:
+        #         action = i+1
+        #     else:
+        #         break
 
         action = env.gg_action(action)
         v_new, pos_new, reward, end = env.step(action, v, pos, True)
@@ -83,4 +104,5 @@ for _ in range(episodes):
         v = v_new
         pos = pos_new
 
-        plt.draw()
+    plt.pause(0.001)
+    plt.draw()

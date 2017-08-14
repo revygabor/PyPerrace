@@ -64,7 +64,7 @@ class PaperRaceEnv:
         if np.array_equal(spd_new, [0,0]):
             end = True
 
-        if self.crosses_finish_line(pos_old, spd_new, self.segm_list[self.segm][0:2], self.segm_list[self.segm][2:]):
+        if not end and self.crosses_finish_line(pos_old, spd_new, self.segm_list[self.segm][0:2], self.segm_list[self.segm][2:]):
             reward = 1000
             self.segm += 1
             if self.segm > len(self.segm_list):
@@ -104,7 +104,7 @@ class PaperRaceEnv:
         # Annak eldontese hogy akkor az egyenesek metszespontja az most a
         # szakaszokon belulre esik-e: Ha mindket t, t1 es t2 is kisebb mint 1 és
         # nagyobb mint 0
-        celba = (0<=t1) and (t1<=1) and (0<=t2) and (t2<=1)
+        celba = 0 <= t1 <= 1 and 0 <= t2 <= 1
         if not(celba):
             t2 = 0
         return celba
@@ -146,5 +146,3 @@ class PaperRaceEnv:
         sizeGGY = np.shape(self.gg_pic)[0]
         data[4] = data_orig[4] / sizeGGX # Az action vektor átlaga 0 körülinek feltételezhető, így csak a méretét kell normalizálni
         data[5] = data_orig[5] / sizeGGY
-
-
