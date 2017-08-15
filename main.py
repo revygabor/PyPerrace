@@ -9,7 +9,11 @@ import random
 from environment import PaperRaceEnv
 
 def softmax(x):
-    exp = np.exp(x)
+    min = np.min(x)
+    max = np.max(x)
+    corr = min if np.abs(min) > np.abs(max) else max
+
+    exp = np.exp(x - corr)
     s = sum(exp)
     return exp / s
 
@@ -46,7 +50,8 @@ else:
     qn.add(Dense(N_hidden, input_shape=(6,), activation='sigmoid'))
     qn.add(Dense(1, activation='linear'))
     qn.compile(optimizer='adam', loss='mse')
-    exp_memory = deque(maxlen=mem_size)
+
+exp_memory = deque(maxlen=mem_size)
 
 episodes = 10000
 
@@ -66,12 +71,12 @@ for ep in range(episodes):
             action = random.randint(1, 9)
             color = 'yellow'
         else:
-            qs = [qn.predict(np.array([np.concatenate((pos, v, env.gg_action(act)))]))[0] for act in range(1, 10)]
+            qs = [qn.predict(env.normalize_data(np.array([np.concatenate((pos, v, env.gg_action(act)))])))[0] for act in range(1, 10)]
             action = np.argmax(qs) + 1
             color = 'red'
 
         # #softmax
-        # qs = [qn.predict(np.array([np.concatenate((pos, v, env.gg_action(act)))]))[0] for act in range(1, 10)]
+        # qs = np.array([qn.predict(env.normalize_data(np.array([np.concatenate((pos, v, env.gg_action(act)))])))[0] for act in range(1, 10)])
         # sm = softmax(qs)
         # cs = np.cumsum(sm)
         # action = 1
@@ -89,7 +94,7 @@ for ep in range(episodes):
 
         if len(exp_memory) >= batch_size:
             batch = random.sample(exp_memory, batch_size)
-            inputs = np.zeros((batch_size, 6))
+            train_inp = np.zeros((batch_size, 6))
             targets = np.zeros((batch_size, 1))
             for i in range(batch_size):
                 state = batch[i][0]
@@ -99,10 +104,16 @@ for ep in range(episodes):
                 done = batch[i][4]
 
                 inp = np.concatenate((state, action))
-                inputs[i:i+1] = np.expand_dims(inp, axis=0)
-                q_next = qn.predict(np.array([np.concatenate((new_state, env.gg_action(1)))]))[0]
+                train_inp[i:i + 1] = np.expand_dims(inp, axis=0)
+                train_inp = env.normalize_data(train_inp)
+
+                pred_inp = np.array([np.concatenate((new_state, env.gg_action(1)))])
+                pred_inp = env.normalize_data(pred_inp)
+                q_next = qn.predict(pred_inp)[0]
                 for aa in range(2, 10):
-                    qq = qn.predict(np.array([np.concatenate((new_state, env.gg_action(aa)))]))[0]
+                    pred_inp = np.array([np.concatenate((new_state, env.gg_action(aa)))])
+                    pred_inp = env.normalize_data(pred_inp)
+                    qq = qn.predict(pred_inp)[0]
                     if qq > q_next:
                         q_next = qq
 
@@ -110,11 +121,12 @@ for ep in range(episodes):
                     targets[i] = reward
                 else:
                     targets[i] = reward + q_next
-            qn.train_on_batch(inputs, targets)
+            qn.train_on_batch(train_inp, targets)
 
         v = v_new
         pos = pos_new
-    explore -= explore_reduction
+
+    explore = max(0, explore - explore_reduction)
 
     if draw:
         plt.pause(0.001)

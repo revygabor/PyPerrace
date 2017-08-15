@@ -34,7 +34,7 @@ class PaperRaceEnv:
         #   end: logikai érték, vége ha a vége valamiért az epizódnak
         # Inputs:
         #   SpdChn: A sebesség megváltoztatása.(De ez relatívban van!!!) (MÁTRIX!!!)
-        #   SpdOld: Az aktuális #sebességvektor
+        #   SpdOld: Az aktuális sebességvektor
 
         end = False
         reward = 0
@@ -135,14 +135,16 @@ class PaperRaceEnv:
         self.segm = 1
 
     def normalize_data(self, data_orig):
-        data = np.zeros(1, 6)
+        n_rows = data_orig.shape[0]
+        data = np.zeros((n_rows, 6))
         sizeX = np.shape(self.trk_pic)[1]
         sizeY = np.shape(self.trk_pic)[0]
-        data[0] = (data_orig[0] - sizeX/2) / sizeX
-        data[2] = (data_orig[2] - sizeX/2) / sizeX
-        data[1] = (data_orig[1] - sizeY/2) / sizeY
-        data[3] = (data_orig[3] - sizeY/2) / sizeY
+        data[:, 0] = (data_orig[:, 0] - sizeX/2) / sizeX
+        data[:, 2] = (data_orig[:, 2] - sizeX/2) / sizeX
+        data[:, 1] = (data_orig[:, 1] - sizeY/2) / sizeY
+        data[:, 3] = (data_orig[:, 3] - sizeY/2) / sizeY
         sizeGGX = np.shape(self.gg_pic)[1]
         sizeGGY = np.shape(self.gg_pic)[0]
-        data[4] = data_orig[4] / sizeGGX # Az action vektor átlaga 0 körülinek feltételezhető, így csak a méretét kell normalizálni
-        data[5] = data_orig[5] / sizeGGY
+        data[:, 4] = data_orig[:, 4] / sizeGGX # Az action vektor átlaga 0 körülinek feltételezhető, így csak a méretét kell normalizálni
+        data[:, 5] = data_orig[:, 5] / sizeGGY
+        return data
