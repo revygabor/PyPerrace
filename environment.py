@@ -24,7 +24,7 @@ class PaperRaceEnv:
             Y = np.array([self.segm_list[i][1], self.segm_list[i][3]])
             plt.plot(X, Y, color='red')
 
-    def step(self, spd_chn, spd_old, pos_old, draw):
+    def step(self, spd_chn, spd_old, pos_old, draw, color):
 
         # LEP Ez a függvény számolja a lépést
         # Output:
@@ -55,7 +55,7 @@ class PaperRaceEnv:
         if draw:
             X = np.array([pos_old[0], pos_new[0]])
             Y = np.array([pos_old[1], pos_new[1]])
-            plt.plot(X, Y, color='blue')
+            plt.plot(X, Y, color=color)
 
         if not self.is_on_track(pos_new):
             reward = -1000

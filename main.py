@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from keras.models import Sequential
+from keras.models import Sequential, load_model
 from keras.layers import Dense
 from collections import deque
 import random
@@ -34,19 +34,27 @@ N_hidden = 100
 mem_size = 1000
 batch_size = 20
 explore = 0.9
+explore_reduction = 0.001
 
-qn = Sequential()
-qn.add(Dense(N_hidden, input_shape=(6,), activation='sigmoid'))
-qn.add(Dense(1, activation='linear'))
-qn.compile(optimizer='adam', loss='mse')
-exp_memory = deque(maxlen=mem_size)
+draw = True
+
+load = input('Load saved model (qn.h5)? (y/n)') == 'y'
+if load:
+    qn = load_model('qn.h5')
+else:
+    qn = Sequential()
+    qn.add(Dense(N_hidden, input_shape=(6,), activation='sigmoid'))
+    qn.add(Dense(1, activation='linear'))
+    qn.compile(optimizer='adam', loss='mse')
+    exp_memory = deque(maxlen=mem_size)
 
 episodes = 10000
 
 for ep in range(episodes):
     print(ep)
-    plt.clf()
-    env.draw_track()
+    if draw:
+        plt.clf()
+        env.draw_track()
     v = np.array([1, 0])
     pos = np.array(env.kezdo_poz)
     reward = 0
@@ -56,9 +64,11 @@ for ep in range(episodes):
         #e-greedy
         if random.random() < explore:
             action = random.randint(1, 9)
+            color = 'yellow'
         else:
             qs = [qn.predict(np.array([np.concatenate((pos, v, env.gg_action(act)))]))[0] for act in range(1, 10)]
             action = np.argmax(qs) + 1
+            color = 'red'
 
         # #softmax
         # qs = [qn.predict(np.array([np.concatenate((pos, v, env.gg_action(act)))]))[0] for act in range(1, 10)]
@@ -68,12 +78,13 @@ for ep in range(episodes):
         # rand = random.random()
         # for i in range(len(cs)):
         #     if rand > cs[i]:
-        #         action = i+1
+        #         action = i+2
         #     else:
         #         break
+        # color = (sm[action], 1-sm[action], 1)
 
         action = env.gg_action(action)
-        v_new, pos_new, reward, end = env.step(action, v, pos, True)
+        v_new, pos_new, reward, end = env.step(action, v, pos, draw, color)
         exp_memory.append( (np.concatenate((pos, v)), action, np.concatenate((pos_new, v_new)), reward, end) )
 
         if len(exp_memory) >= batch_size:
@@ -103,6 +114,11 @@ for ep in range(episodes):
 
         v = v_new
         pos = pos_new
+    explore -= explore_reduction
 
-    plt.pause(0.001)
-    plt.draw()
+    if draw:
+        plt.pause(0.001)
+        plt.draw()
+
+    if(ep % 1000 == 0):
+        qn.save('qn.h5')
