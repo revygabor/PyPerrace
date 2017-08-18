@@ -71,12 +71,25 @@ for ep in range(episodes):
             action = random.randint(1, 9)
             color = 'yellow'
         else:
-            qs = [qn.predict(env.normalize_data(np.array([np.concatenate((pos, v, env.gg_action(act)))])))[0] for act in range(1, 10)]
+            qs = [qn.predict(
+                env.normalize_data(
+                    np.array([np.concatenate((
+                        pos, v, env.gg_action(act)
+                    ))])
+                )
+            )[0] for act in range(1, 10)]
             action = np.argmax(qs) + 1
             color = 'red'
 
         # #softmax
-        # qs = np.array([qn.predict(env.normalize_data(np.array([np.concatenate((pos, v, env.gg_action(act)))])))[0] for act in range(1, 10)])
+        # qs = [qn.predict(
+        #     env.normalize_data(
+        #         np.array([np.concatenate((
+        #             pos, v, env.gg_action(act)
+        #         ))])
+        #     )
+        # )[0] for act in range(1, 10)]
+        # qs = np.array(qs)
         # sm = softmax(qs)
         # cs = np.cumsum(sm)
         # action = 1
