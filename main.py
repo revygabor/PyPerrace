@@ -47,9 +47,9 @@ if load:
     qn = load_model('qn.h5')
 else:
     qn = Sequential()
-    qn.add(Dense(N_hidden, input_shape=(6,), activation='sigmoid'))
-    qn.add(Dense(1, activation='linear'))
-    qn.compile(optimizer='adam', loss='mse')
+    qn.add(Dense(N_hidden, input_shape=(6,), activation='sigmoid', kernel_initializer='glorot_normal', bias_initializer='zeros'))
+    qn.add(Dense(1, activation='linear', kernel_initializer='glorot_normal', bias_initializer='zeros'))
+    qn.compile(optimizer='sgd', loss='mse')
 
 exp_memory = deque(maxlen=mem_size)
 
@@ -140,6 +140,7 @@ for ep in range(episodes):
         pos = pos_new
 
     explore = max(0, explore - explore_reduction)
+    env.reset()
 
     if draw:
         plt.pause(0.001)
