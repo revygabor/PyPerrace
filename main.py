@@ -47,8 +47,8 @@ if load:
     qn = load_model('qn.h5')
 else:
     qn = Sequential()
-    qn.add(Dense(N_hidden, input_shape=(6,), activation='sigmoid', kernel_initializer='glorot_normal', bias_initializer='zeros'))
-    qn.add(Dense(1, activation='linear', kernel_initializer='glorot_normal', bias_initializer='zeros'))
+    qn.add(Dense(N_hidden, input_shape=(4,), activation='sigmoid', kernel_initializer='glorot_normal', bias_initializer='zeros'))
+    qn.add(Dense(9, activation='linear', kernel_initializer='glorot_normal', bias_initializer='zeros'))
     qn.compile(optimizer='sgd', loss='mse')
 
 exp_memory = deque(maxlen=mem_size)
@@ -71,13 +71,13 @@ for ep in range(episodes):
             action = random.randint(1, 9)
             color = 'yellow'
         else:
-            qs = [qn.predict(
+            qs = qn.predict(
                 env.normalize_data(
                     np.array([np.concatenate((
-                        pos, v, env.gg_action(act)
+                        pos, v
                     ))])
                 )
-            )[0] for act in range(1, 10)]
+            )[0]
             action = np.argmax(qs) + 1
             color = 'red'
 
@@ -101,14 +101,14 @@ for ep in range(episodes):
         #         break
         # color = (sm[action], 1-sm[action], 1)
 
-        action = env.gg_action(action)
-        v_new, pos_new, reward, end = env.step(action, v, pos, draw, color)
+        gg_action = env.gg_action(action)
+        v_new, pos_new, reward, end = env.step(gg_action, v, pos, draw, color)
         exp_memory.append( (np.concatenate((pos, v)), action, np.concatenate((pos_new, v_new)), reward, end) )
 
         if len(exp_memory) >= batch_size:
             batch = random.sample(exp_memory, batch_size)
-            train_inp = np.zeros((batch_size, 6))
-            targets = np.zeros((batch_size, 1))
+            train_inp = np.zeros((batch_size, 4))
+            targets = np.zeros((batch_size, 9))
             for i in range(batch_size):
                 state = batch[i][0]
                 action = batch[i][1]
@@ -116,35 +116,30 @@ for ep in range(episodes):
                 r = batch[i][3]
                 done = batch[i][4]
 
-                inp = np.concatenate((state, action))
-                train_inp[i:i + 1] = np.expand_dims(inp, axis=0)
-                train_inp = env.normalize_data(train_inp)
+                inp = state
+                train_inp[i:i + 1] = inp
 
-                pred_inp = np.array([np.concatenate((new_state, env.gg_action(1)))])
+                pred_inp = np.expand_dims(np.array(new_state), axis=0)
                 pred_inp = env.normalize_data(pred_inp)
-                q_next = qn.predict(pred_inp)[0]
-                for aa in range(2, 10):
-                    pred_inp = np.array([np.concatenate((new_state, env.gg_action(aa)))])
-                    pred_inp = env.normalize_data(pred_inp)
-                    qq = qn.predict(pred_inp)[0]
-                    if qq > q_next:
-                        q_next = qq
+                q_next = np.max(qn.predict(pred_inp)[0])
 
+                targets[i, :] = qn.predict(env.normalize_data(np.expand_dims(inp, axis=0)))
                 if done:
-                    targets[i] = reward
+                    targets[i, action - 1] = reward
                 else:
-                    targets[i] = reward + q_next
+                    targets[i, action - 1] = reward + q_next
+            train_inp = env.normalize_data(train_inp)
             qn.train_on_batch(train_inp, targets)
 
         v = v_new
         pos = pos_new
 
-    explore = max(0, explore - explore_reduction)
+    explore = max([0, explore - explore_reduction])
     env.reset()
 
     if draw:
         plt.pause(0.001)
         plt.draw()
 
-    if(ep % 1000 == 0):
+    if ep % 1000 == 0:
         qn.save('qn.h5')
