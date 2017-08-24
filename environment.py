@@ -15,6 +15,7 @@ class PaperRaceEnv:
         start_x = np.floor((start[0] + start[2]) / 2)
         start_y = np.floor((start[1] + start[3]) / 2)
         self.kezdo_poz = np.array([start_x, start_y])
+        self.gg_actions = None
 
 
     def draw_track(self):
@@ -58,19 +59,19 @@ class PaperRaceEnv:
             plt.plot(X, Y, color=color)
 
         if not self.is_on_track(pos_new):
-            reward = -1000
+            reward = -10
             end = True
 
         if np.array_equal(spd_new, [0,0]):
             end = True
 
         if not end and self.crosses_finish_line(pos_old, spd_new, self.segm_list[self.segm][0:2], self.segm_list[self.segm][2:]):
-            reward = 1000
+            reward = 10
             self.segm += 1
             if self.segm > len(self.segm_list):
                 end = True
 
-        return spd_new, pos_new, reward, end
+        return spd_new, pos_new, reward+1, end #TODO: remove +1
 
     def is_on_track(self, pos):
         if pos[0] > np.shape(self.trk_pic)[1] or pos[1] > np.shape(self.trk_pic)[0] or \
@@ -110,26 +111,30 @@ class PaperRaceEnv:
         return celba
 
     def gg_action(self, action):
-        if 1 <= action < 9:
-            # a GGpic 41x41-es B&W bmp. A közepétől nézzük, meddig fehér. (A közepén,
-            # csak hogy látszódjon, van egy fekete pont!
-            xsrt, ysrt = 21, 21
-            r = 1
-            pix_in_gg = True
-            x, y = xsrt, ysrt
-            while pix_in_gg:
-                # lépjünk az Act irányba +1 pixelnyit, mik x és y ekkor:
-                rad = np.pi / 4 *(action+3)
-                y = ysrt + round(np.sin(rad)*r)
-                x = xsrt + round(np.cos(rad)*r)
-                r = r + 1
+        if self.gg_actions is None:
+            self.gg_actions = [None] * 9
+            for act in range(1, 10):
+                if 1 <= act < 9:
+                    # a GGpic 41x41-es B&W bmp. A közepétől nézzük, meddig fehér. (A közepén,
+                    # csak hogy látszódjon, van egy fekete pont!
+                    xsrt, ysrt = 21, 21
+                    r = 1
+                    pix_in_gg = True
+                    x, y = xsrt, ysrt
+                    while pix_in_gg:
+                        # lépjünk az Act irányba +1 pixelnyit, mik x és y ekkor:
+                        rad = np.pi / 4 * (act+3)
+                        y = ysrt + round(np.sin(rad)*r)
+                        x = xsrt + round(np.cos(rad)*r)
+                        r = r + 1
 
-                #GG-n belül vagyunk-e még?
-                pix_in_gg = np.array_equal(self.gg_pic[int(x-1), int(y-1)], [255,255,255,255])
+                        #GG-n belül vagyunk-e még?
+                        pix_in_gg = np.array_equal(self.gg_pic[int(x-1), int(y-1)], [255,255,255,255])
 
-            return -(x-xsrt), y-ysrt
-        else:
-            return 0, 0
+                    self.gg_actions[act-1] = (-(x-xsrt), y-ysrt)
+                else:
+                    self.gg_actions[act-1] = (0, 0)
+        return self.gg_actions[action - 1]
 
     def reset(self):
         self.segm = 1
