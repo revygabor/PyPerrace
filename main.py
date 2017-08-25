@@ -32,7 +32,7 @@ segm_list = [
     np.array([250, 60, 250, 100])
 ]
 
-env = PaperRaceEnv('PALYA3.bmp', trk_col, 'GG1.bmp', segm_list)
+env = PaperRaceEnv('PALYA3.bmp', trk_col, 'GG1.bmp', segm_list, random_init=True)
 
 N_hidden = 100
 mem_size = 1000
@@ -66,7 +66,7 @@ for ep in range(episodes):
         plt.clf()
         env.draw_track()
     v = np.array([1, 0])
-    pos = np.array(env.kezdo_poz)
+    pos = np.array(env.starting_pos)
     reward = 0
     end = False
     while not end:

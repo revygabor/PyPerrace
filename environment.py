@@ -1,9 +1,10 @@
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import numpy as np
+from random import randint
 
 class PaperRaceEnv:
-    def __init__(self, trk_pic, trk_col, gg_pic, segm_list):
+    def __init__(self, trk_pic, trk_col, gg_pic, segm_list, random_init = False):
         self.trk_pic = mpimg.imread(trk_pic)
         self.trk_col = trk_col        #trk_pic-en a pálya színe
         self.gg_pic = mpimg.imread(gg_pic)
@@ -14,8 +15,14 @@ class PaperRaceEnv:
         start = segm_list[0]  #az első szkasz közepén áll először az autó
         start_x = np.floor((start[0] + start[2]) / 2)
         start_y = np.floor((start[1] + start[3]) / 2)
-        self.kezdo_poz = np.array([start_x, start_y])
+        self.starting_pos = np.array([start_x, start_y])
+        self.random_init = random_init
         self.gg_actions = None
+        self.track_indices = []
+        for x in range(self.trk_pic.shape[1]):
+            for y in range(self.trk_pic.shape[0]):
+                if np.array_equal(self.trk_pic[y, x, :], self.trk_col):
+                    self.track_indices.append([x, y])
 
 
     def draw_track(self):
@@ -138,6 +145,8 @@ class PaperRaceEnv:
 
     def reset(self):
         self.segm = 1
+        if self.random_init:
+            self.starting_pos = self.track_indices[randint(0, len(self.track_indices) - 1)]
 
     def normalize_data(self, data_orig):
         n_rows = data_orig.shape[0]
