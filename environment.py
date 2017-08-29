@@ -2,28 +2,36 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import numpy as np
 from random import randint
+from skimage.morphology import disk
+from skimage.color import rgb2gray
 
 class PaperRaceEnv:
-    def __init__(self, trk_pic, trk_col, gg_pic, segm_list, random_init = False):
+    def __init__(self, trk_pic, trk_col, gg_pic, segm_list, random_init=False, track_inside_color=None):
+        if track_inside_color is None:
+            self.track_inside_color = np.array([255, 0, 0], dtype='uint8')
+        else:
+            self.track_inside_color = np.array(track_inside_color, dtype='uint8')
         self.trk_pic = mpimg.imread(trk_pic)
         self.trk_col = trk_col        #trk_pic-en a pálya színe
         self.gg_pic = mpimg.imread(gg_pic)
-        self.segm_list = segm_list        #szakaszok listája
+        self.segm_list = segm_list        #szakaszok listája, [x1 y1 x2 y2]
         self.steps = 0        #az eddig megtett lépések száma
         self.segm = 1         #a következő átszakítandó szakasz száma
 
         start = segm_list[0]  #az első szkasz közepén áll először az autó
-        start_x = np.floor((start[0] + start[2]) / 2)
-        start_y = np.floor((start[1] + start[3]) / 2)
+        start_x = int(np.floor((start[0] + start[2]) / 2))
+        start_y = int(np.floor((start[1] + start[3]) / 2))
         self.starting_pos = np.array([start_x, start_y])
         self.random_init = random_init
         self.gg_actions = None
         self.track_indices = []
+        self.prev_dist = 0
         for x in range(self.trk_pic.shape[1]):
             for y in range(self.trk_pic.shape[0]):
                 if np.array_equal(self.trk_pic[y, x, :], self.trk_col):
                     self.track_indices.append([x, y])
 
+        self.dists = self.__get_dists(True)
 
     def draw_track(self):
         plt.imshow(self.trk_pic)
@@ -65,20 +73,19 @@ class PaperRaceEnv:
             Y = np.array([pos_old[1], pos_new[1]])
             plt.plot(X, Y, color=color)
 
+        start_line = self.segm_list[0]
         if not self.is_on_track(pos_new):
             reward = -10
             end = True
-
-        if np.array_equal(spd_new, [0,0]):
+        elif start_line[1] < pos_new[1] < start_line[3] and pos_old[0] >= start_line[0] > pos_new[0]: #visszafelé indul
+            reward = -10
+            end = True
+        else:
+            reward = self.get_reward(pos_new)
+        if np.array_equal(spd_new, [0, 0]):
             end = True
 
-        if not end and self.crosses_finish_line(pos_old, spd_new, self.segm_list[self.segm][0:2], self.segm_list[self.segm][2:]):
-            reward = 10
-            self.segm += 1
-            if self.segm > len(self.segm_list):
-                end = True
-
-        return spd_new, pos_new, reward+1, end #TODO: remove +1
+        return spd_new, pos_new, reward, end
 
     def is_on_track(self, pos):
         if pos[0] > np.shape(self.trk_pic)[1] or pos[1] > np.shape(self.trk_pic)[0] or \
@@ -158,3 +165,75 @@ class PaperRaceEnv:
         data[:, 1] = (data_orig[:, 1] - sizeY/2) / sizeY
         data[:, 3] = (data_orig[:, 3] - sizeY/2) / sizeY
         return data
+
+    def get_reward(self, pos_new):
+        trk = rgb2gray(self.trk_pic)
+        col = rgb2gray(np.reshape(self.track_inside_color, (1,1,3)))
+        pos_new = np.array(pos_new, dtype='int32')
+        tmp = [0]
+        r = 0
+
+        while not np.any(tmp):
+            r = r+1
+            tmp = trk[pos_new[1]-r:pos_new[1]+r+1, pos_new[0]-r:pos_new[0]+r+1]
+            mask = disk(r)
+            tmp = np.multiply(mask, tmp)
+            tmp[tmp != col] = 0
+
+        indices = [p[0] for p in np.nonzero(tmp)]
+        offset = [indices[1]-r, indices[0]-r]
+        pos = np.array(pos_new + offset)
+        curr_dist = self.dists[tuple(pos)]
+        reward = curr_dist - self.prev_dist
+        self.prev_dist = curr_dist
+        return reward
+
+    def __get_dists(self, rajz=False):
+        """
+        :return: a dictionary consisting (inner track point, distance) pairs
+        """
+        dist_dict = {}
+        start_point = self.starting_pos
+        trk = rgb2gray(self.trk_pic)
+        col = rgb2gray(np.reshape(np.array(self.track_inside_color), (1, 1, 3)))[0, 0]
+        tmp = [0]
+        r = 0
+        while not np.any(tmp):
+            r = r+1
+            mask = disk(r)
+            tmp = trk[start_point[1]-r:start_point[1]+r+1, start_point[0]-r:start_point[0]+r+1]
+            tmp = np.multiply(mask, tmp)
+            tmp[tmp != col] = 0
+
+        indices = [p[0] for p in np.nonzero(tmp)]
+        offset = [indices[1]-r, indices[0]-r]
+        start_point = np.array(start_point+offset)
+        dist_dict[tuple(start_point)] = 0
+        dist = 0
+        JOBB, FEL, BAL, LE = [1, 0], [0, -1], [-1, 0], [0, 1]  # [x, y], tehát a mátrix indexelésekor fordítva, de a pozícióhoz hozzáadható azonnal
+        dirs = [JOBB, FEL, BAL, LE]
+        direction_idx = 0
+        point = start_point
+        if rajz:
+            self.draw_track()
+        while True:
+            dist += 1
+            bal_ford = dirs[(direction_idx+1) % 4]
+            jobb_ford = dirs[(direction_idx-1) % 4]
+            if trk[point[1] + bal_ford[1], point[0] + bal_ford[0]] == col:
+                direction_idx = (direction_idx + 1) % 4
+                point = point + bal_ford
+            elif trk[point[1] + dirs[direction_idx][1], point[0] + dirs[direction_idx][0]] == col:
+                point = point + dirs[direction_idx]
+            else:
+                direction_idx = (direction_idx - 1) % 4
+                point = point + jobb_ford
+            dist_dict[tuple(point)] = dist
+            if rajz:
+                plt.plot([point[0]], [point[1]], 'yo')
+            if np.array_equal(point, start_point):
+                break
+        if rajz:
+            plt.draw()
+            plt.pause(0.001)
+        return dist_dict
