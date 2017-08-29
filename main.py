@@ -32,9 +32,9 @@ segm_list = [
     np.array([250, 60, 250, 100])
 ]
 
-env = PaperRaceEnv('PALYA3.bmp', trk_col, 'GG1.bmp', segm_list, random_init=True)
+env = PaperRaceEnv('PALYA3.bmp', trk_col, 'GG1.bmp', segm_list, random_init=False)
 
-N_hidden = 100
+N_hidden = 256
 mem_size = 1000
 batch_size = 30
 discount_factor = 0.8

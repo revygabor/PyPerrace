@@ -152,6 +152,7 @@ class PaperRaceEnv:
 
     def reset(self):
         self.segm = 1
+        self.prev_dist = 0
         if self.random_init:
             self.starting_pos = self.track_indices[randint(0, len(self.track_indices) - 1)]
 
