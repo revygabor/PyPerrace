@@ -23,16 +23,10 @@ plt.show()
 
 trk_col = np.array([99, 99, 99])
 
-segm_list = [
-    np.array([350, 60, 350, 100]),
-    np.array([360, 60, 360, 100]),
-    np.array([539, 116, 517, 137]),
-    np.array([348, 354, 348, 326]),
-    np.array([35, 200, 70, 200]),
-    np.array([250, 60, 250, 100])
-]
+# start_line = np.array([350, 60, 350, 100]) # eredeti pálya
+start_line = np.array([32, 393, 32, 425]) # sigmoid alakú pálya
 
-env = PaperRaceEnv('PALYA3.bmp', trk_col, 'GG1.bmp', segm_list, random_init=False)
+env = PaperRaceEnv('PALYA3.bmp', trk_col, 'GG1.bmp', start_line, random_init=False)
 
 N_hidden = 256
 mem_size = 1000
@@ -129,7 +123,7 @@ for ep in range(episodes):
                 done = batch[i][4]
 
                 inp = state
-                train_inp[i:i + 1] = inp
+                train_inp[i] = inp
 
                 pred_inp = np.expand_dims(np.array(new_state), axis=0)
                 pred_inp = env.normalize_data(pred_inp)
