@@ -142,7 +142,7 @@ class PaperRaceEnv:
         return self.gg_actions[action - 1]
 
     def reset(self):
-        # ha vmiért vége egy menetnek, meghívódik
+        """ha vmiért vége egy menetnek, meghívódik"""
 
         # 0-ázza a start poz-tól való távolságot a reward fv-hez
         self.prev_dist = 0
@@ -152,8 +152,10 @@ class PaperRaceEnv:
             self.starting_pos = self.track_indices[randint(0, len(self.track_indices) - 1)]
 
     def normalize_data(self, data_orig):
-        # a háló könnyebben, tanul, ha az értékek +-1 közé esnek, ezért normalizáljuk őket
-        # pozícióból kivonjuk a pálya méretének a felét, majd elosztjuk a pálya méretével
+        """
+        a háló könnyebben, tanul, ha az értékek +-1 közé esnek, ezért normalizáljuk őket
+        pozícióból kivonjuk a pálya méretének a felét, majd elosztjuk a pálya méretével
+        """
 
         n_rows = data_orig.shape[0]
         data = np.zeros((n_rows, 4))
@@ -167,25 +169,39 @@ class PaperRaceEnv:
         return data
 
     def get_reward(self, pos_new):
-        trk = rgb2gray(self.trk_pic)
+        """
+        reward függvény
+        az előzőpontból a cél felé megtett utat "díjazza"
+        :param pos_new: a mostani pozíció
+        :return: reward értéke
+        """
+        trk = rgb2gray(self.trk_pic) # szürkeárnyalatosban dolgozunk
         col = rgb2gray(np.reshape(self.track_inside_color, (1, 1, 3)))
         pos_new = np.array(pos_new, dtype='int32')
         tmp = [0]
         r = 0
 
-        while not np.any(tmp):
-            r = r + 1
-            tmp = trk[pos_new[1] - r:pos_new[1] + r + 1, pos_new[0] - r:pos_new[0] + r + 1]
-            mask = disk(r)
-            tmp = np.multiply(mask, tmp)
-            tmp[tmp != col] = 0
+        # az algoritmus úgy működik, hogy az aktuális pozícióban egyre negyobb sugárral
+        # létrehoz egy diszket, amivel megnézi, hogy van -e r sugarú környezetében piros pixel
+        # ha igen, akkor azt a pixelt kikeresi a dist_dict-ből, majd a kapott értéket kivonja
+        # az előző lépésben kapott-ból, így megkapjuk, hogy mennyit tett meg azóta és ez a reward
 
-        indices = [p[0] for p in np.nonzero(tmp)]
-        offset = [indices[1] - r, indices[0] - r]
-        pos = np.array(pos_new + offset)
-        curr_dist = self.dists[tuple(pos)]
-        reward = curr_dist - self.prev_dist
-        self.prev_dist = curr_dist
+        while not np.any(tmp):
+            r = r + 1 # növeljük a disc sugarát
+            tmp = trk[pos_new[1] - r:pos_new[1] + r + 1, pos_new[0] - r:pos_new[0] + r + 1] # vesszük az aktuális
+            #  pozíció körüli 2rx2r-es négyzetet
+            mask = disk(r)
+            tmp = np.multiply(mask, tmp) # maszkoljuk a disc-kel
+            tmp[tmp != col] = 0 # megnézzük, hogy van -e benne piros
+
+        indices = [p[0] for p in np.nonzero(tmp)] # ha volt benne piros, akkor lekérjük a pozícióját
+        offset = [indices[1] - r, indices[0] - r] # eltoljuk, hogy megkapjuk
+        # a kocsihoz viszonyított relatív pozícióját
+        pos = np.array(pos_new + offset) # kiszámoljuk a pályán lévő pozícióját a pontnak
+        curr_dist = self.dists[tuple(pos)] # a dist_dict-ből lekérjük a start-tól való távolságát
+        reward = curr_dist - self.prev_dist # kivonjuk az előző lépésben kapott távolságból
+        self.prev_dist = curr_dist # atz új lesz a régi, hogy a követkző lépésben legyen miből kivonni
+
         return reward
 
     def __get_dists(self, rajz=False):
