@@ -18,37 +18,32 @@ def softmax(x, tau):
     return exp / s
 
 
-plt.ion()
+plt.ion() # kirajzoláshoz szükséges cuccok
 plt.show()
 
-trk_col = np.array([99, 99, 99])
+trk_col = np.array([99, 99, 99]) # pálya színe (szürke)
 
-segm_list = [
-    np.array([350, 60, 350, 100]),
-    np.array([360, 60, 360, 100]),
-    np.array([539, 116, 517, 137]),
-    np.array([348, 354, 348, 326]),
-    np.array([35, 200, 70, 200]),
-    np.array([250, 60, 250, 100])
-]
+# start_line = np.array([350, 60, 350, 100]) # eredeti pálya
+start_line = np.array([32, 393, 32, 425]) # sigmoid alakú pálya
 
-env = PaperRaceEnv('PALYA3.bmp', trk_col, 'GG1.bmp', segm_list, random_init=False)
+env = PaperRaceEnv('PALYA3.bmp', trk_col, 'GG1.bmp', start_line, random_init=True) # paperrace környezet létrehozása
 
-N_hidden = 256
-mem_size = 1000
-batch_size = 30
+N_hidden = 800 # rejtett neuronok száma
+mem_size = 1000 # a memória mérete, amiből a batch-be válogatunk
+batch_size = 30 # batch mérete, ami a tanítási adatokat tartalmazza
 discount_factor = 0.8
 explore = 0.9
 explore_reduction = 0.001
 tau = 3
 tau_reduction = 0.1
+episodes = 10000 # hányszor fusson a tanítás
 
 draw = True
 
-load = input('Load saved model (qn.h5)? (y/n)') == 'y'
+load = input('Load saved model (qn.h5)? (y/n)') == 'y' # model betöltése vagy új létrehozása
 if load:
     qn = load_model('qn.h5')
-else:
+else: # model létrehozása
     qn = Sequential()
     qn.add(Dense(N_hidden, input_shape=(4,), activation='sigmoid', kernel_initializer='glorot_normal', bias_initializer='zeros'))
     qn.add(Dense(9, activation='linear', kernel_initializer='glorot_normal', bias_initializer='zeros'))
@@ -56,17 +51,17 @@ else:
 
 exp_memory = deque(maxlen=mem_size)
 
-episodes = 10000
 
 text = None
 latest_loss = 0
 for ep in range(episodes):
-    print(ep)
-    if draw:
+    print(ep) # epizód számának kiírása
+    if draw: # ha rajzolunk
         plt.clf()
         env.draw_track()
-    v = np.array([1, 0])
-    pos = np.array(env.starting_pos)
+    v = np.array([1, 0]) # az elején a sebesség jobbra 1
+    #ezt könnyen megváltoztatja, tulajdonképen csak arra jó, hogy nem 0
+    pos = np.array(env.starting_pos) # kezdőpozíció beállítása
     reward = 0
     end = False
     while not end:
@@ -106,30 +101,36 @@ for ep in range(episodes):
                 break
         color = (sm[action-1], 1-sm[action-1], 1)
 
-        gg_action = env.gg_action(action)
-        v_new, pos_new, reward, end = env.step(gg_action, v, pos, draw, color)
-        if text is not None:
+
+        gg_action = env.gg_action(action) # action-höz tartozó vektor lekérése
+        v_new, pos_new, reward, end = env.step(gg_action, v, pos, draw, color) # lépés
+        # a háló által kiválasztott gyorsulással
+
+        if text is not None: # adatok kiírása
             text.set_visible(False)
         text = plt.text(0, 0, "Q=" + np.array_str(qs) + "\nsm=" + np.array_str(sm) + "\nChosen action: " + str(action) +
                         " Reward: " + str(reward) + " Loss: " + str(latest_loss))
+
         if draw:
             plt.pause(0.001)
             plt.draw()
-        exp_memory.append( (np.concatenate((pos, v)), action, np.concatenate((pos_new, v_new)), reward, end) )
 
-        if len(exp_memory) >= batch_size:
-            batch = random.sample(exp_memory, batch_size)
+        exp_memory.append( (np.concatenate((pos, v)), action, np.concatenate((pos_new, v_new)), reward, end) )
+        # lépés adatainak hozzáadaása a memóriához
+
+        if len(exp_memory) >= batch_size: # ha már elég adat van a memóriában
+            batch = random.sample(exp_memory, batch_size) # véletlenszerűen kiválasztunk elemeket a memóriából a batchbe
             train_inp = np.zeros((batch_size, 4))
             targets = np.zeros((batch_size, 9))
             for i in range(batch_size):
-                state = batch[i][0]
+                state = batch[i][0] # a batchből kivesszük az adatokat
                 action = batch[i][1]
                 new_state = batch[i][2]
                 r = batch[i][3]
                 done = batch[i][4]
 
                 inp = state
-                train_inp[i:i + 1] = inp
+                train_inp[i] = inp # berakjuk az inputba, amivel tanítunk
 
                 pred_inp = np.expand_dims(np.array(new_state), axis=0)
                 pred_inp = env.normalize_data(pred_inp)
