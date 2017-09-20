@@ -49,10 +49,10 @@ for x in range(w):
     inp = np.full((h, 4), x) # értékűre hozzuk létre a batch mátrixot
     inp[:, 1] = np.arange(h)
     inp[:, 2:4] = v(h)
-    inp = normalize_data(inp, h, w);
+    inp = normalize_data(inp, h, w)
     qs = model.predict(inp) # (pos(x, y), v)
     q_max = qs.argmax(1)
-    image[:, x] = color_tensor[:, q_max, :]
+    image[:, x, :] = color_tensor[:, q_max, :]
 
     print(x)
 
