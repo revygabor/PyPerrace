@@ -150,6 +150,7 @@ class PaperRaceEnv:
         # ha a random indítás be van kapcsolva, akkor új kezdő pozíciót választ
         if self.random_init:
             self.starting_pos = self.track_indices[randint(0, len(self.track_indices) - 1)]
+            self.prev_dist = self.get_reward(self.starting_pos)
 
     def normalize_data(self, data_orig):
         """
