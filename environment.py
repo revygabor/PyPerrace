@@ -99,7 +99,7 @@ class PaperRaceEnv:
 
         #TODO: ha célbaér
 
-        return spd_new, pos_new, reward, end
+        return spd_new, pos_new, reward if reward >= 0 else 2*reward, end
 
     def is_on_track(self, pos):
         # a pálya színe és a pozíciónk pixelének színe alapján

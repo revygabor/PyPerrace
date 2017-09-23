@@ -23,8 +23,8 @@ plt.show()
 
 trk_col = np.array([99, 99, 99]) # pálya színe (szürke)
 
-# start_line = np.array([350, 60, 350, 100]) # eredeti pálya
-start_line = np.array([32, 393, 32, 425]) # sigmoid alakú pálya
+start_line = np.array([350, 60, 350, 100]) # eredeti pálya
+# start_line = np.array([32, 393, 32, 425]) # sigmoid alakú pálya
 
 env = PaperRaceEnv('PALYA3.bmp', trk_col, 'GG1.bmp', start_line, random_init=True) # paperrace környezet létrehozása
 
