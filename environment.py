@@ -9,7 +9,7 @@ from skimage.color import rgb2gray
 class PaperRaceEnv:
     """ez az osztály biztosítja a tanuláshoz a környezetet"""
 
-    def __init__(self, trk_pic, trk_col, gg_pic, start_line, random_init=False, track_inside_color=None):
+    def __init__(self, trk_pic, trk_col, gg_pic, start_line, random_init=False, track_inside_color=None, draw=True):
 
         # ha nincs megadva a pálya belsejének szín, akkor pirosra állítja
         # ez a rewardokat kiszámoló algoritmus működéséhez szükséges
@@ -38,7 +38,7 @@ class PaperRaceEnv:
                 if np.array_equal(self.trk_pic[y, x, :], self.trk_col):
                     self.track_indices.append([x, y])
 
-        self.dists = self.__get_dists(True) # a kezdőponttól való "távolságot" tárolja a reward fv-hez
+        self.dists = self.__get_dists(draw) # a kezdőponttól való "távolságot" tárolja a reward fv-hez
 
     def draw_track(self):
         plt.imshow(self.trk_pic)  # pálya kirajzolása
